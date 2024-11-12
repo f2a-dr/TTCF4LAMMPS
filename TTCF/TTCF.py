@@ -50,6 +50,9 @@ class TTCF():
         self.integrand_global_partial  = np.zeros([Nsteps, avetime_ncol])
         self.integrand_profile_partial = np.zeros([Nsteps, Nbins, avechunk_ncol])
 
+        self.integrand_global_correction_partial = np.zeros([Nsteps, avetime_ncol])
+        self.integrand_profile_correction_partial = np.zeros([Nsteps, Nbins, avetime_ncol])
+
     def add_mappings(self, data_profile, data_global, omega):
 
         #Sum the mappings together
@@ -59,11 +62,18 @@ class TTCF():
         self.integrand_profile_partial += data_profile[:,:,:]*omega
         self.integrand_global_partial  += data_global[:,:]*omega
 
+        self.integrand_global_correction_partial = np.zeros([Nsteps, avetime_ncol])
+        self.integrand_profile_correction_partial = np.zeros([Nsteps, Nbins, avetime_ncol])
+
     def integrate(self, step):
 
         #Perform the integration
         self.TTCF_profile_partial = TTCF_integration(self.integrand_profile_partial, step)
         self.TTCF_global_partial  = TTCF_integration(self.integrand_global_partial, step)
+
+        # Integrate B(s) for the correction term
+        self.TTCF_global_correction_partial = TTCF_integration(self.integrand_global_correction_partial, step)
+        self.TTCF_profile_correction_partial = TTCF_integration(self.integrand_profile_correction_partial, step)
 
         #Add the initial value (t=0) 
         self.TTCF_profile_partial += self.DAV_profile_partial[0,:,:]
@@ -95,6 +105,9 @@ class TTCF():
             
         self.integrand_profile_partial[:,:,:] = 0
         self.integrand_global_partial[:,:]    = 0
+
+        self.integrand_profile_correction_partial[:,:,:] = 0
+        self.integrand_global_correction_partial[:,:] = 0
 
     def finalise_output(self, irank, comm, root=0):
 
