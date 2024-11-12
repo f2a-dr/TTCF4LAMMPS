@@ -54,15 +54,16 @@ setlist.append("fix NVT_SLLOD all nvt/sllod temp ${T} ${T} " + str(Thermo_damp))
 # ============= Outputs =========================
 #Here we define all the computes to get outputs from the simulation
 #Profile 1D chunks here, can add anything from https://docs.lammps.org/fix_ave_chunk.html
-profile_variables = ['vx']
+profile_variables = ['vx', 'c_stress[4]']
 #Define bin discretization
 setlist.append("compute profile_layers all chunk/atom bin/1d y lower "+str(Bin_Width)+" units reduced")
-#Profile (ave/chunk fix)
-setlist.append("fix Profile_variables all ave/chunk 1 1 {} profile_layers {} ave one".format(Delay, ' '.join(profile_variables)))
 #Define computes to get Omega
 setlist.append("compute        shear_T all temp/deform")
 setlist.append("compute        shear_P all pressure shear_T ")
 setlist.append("variable       Omega equal -c_shear_P[4]*(xhi-xlo)*(yhi-ylo)*(zhi-zlo)*${srate}/(${k_B}*${T})")
+#Profile (ave/chunk fix)
+setlist.append("compute        stress all stress/atom shear_T")
+setlist.append("fix Profile_variables all ave/chunk 1 1 {} profile_layers {} ave one".format(Delay, ' '.join(profile_variables)))
 #And global (ave/time fix) variables, often custom computes/variables, see https://docs.lammps.org/fix_ave_time.html
 global_variables = ['c_shear_P[4]', 'v_Omega']
 #global ave/time fix
