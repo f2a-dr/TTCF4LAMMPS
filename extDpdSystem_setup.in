@@ -1,0 +1,50 @@
+# Initialization
+units      lj
+variable   ndim     equal 3
+
+# Box size
+variable    xsize   equal    15
+variable    ysize   equal    15
+variable    zsize   equal    15
+
+# DPD parameters
+variable    rho     equal   3
+variable    k_B     equal   1.0
+variable    T       equal   1.0
+variable    cutoff  equal   1.0
+variable    a       equal   25
+variable    gamma   equal   4.5
+variable    sigma   equal   sqrt(2*${k_B}*${T}${gamma})
+variable    s       equal   0.434
+# Value of the timestep as a fraction of the time unit
+variable    deltat   equal   0.01
+# Number of beads in the simulation box
+variable    nBeads   equal   (${xsize}*${ysize}*${zsize})*${rho}
+
+# Simulation parameters
+timestep    ${deltat}
+dimension   ${ndim}
+variable    srate equal 0.001
+
+# System setting
+atom_style  atomic 
+boundary    p p p
+# comm_modify mode single cutoff 10.0 vel yes 
+comm_modify vel yes 
+newton      on on
+
+# Simulation domain creation and initialization
+lattice         none 1
+region          mybox prism 0 ${xsize} 0 ${ysize} 0 ${zsize} 0 0 0
+create_box      1 mybox
+create_atoms    1 random ${nBeads} 34566 mybox
+mass            * 1.0
+velocity        all create ${T} 4928 mom yes dist gaussian
+
+# Define mass, pair style and interaction coefficients
+pair_style  dpd/ext ${T} ${cutoff} 92997
+pair_coeff  1 1 ${a} ${gamma} ${gamma} ${s} ${s}          # H20
+
+# Neighbor list parameters
+neighbor        1.0 bin
+neigh_modify    delay 0 every 1 check yes
