@@ -126,7 +126,7 @@ for Nd in range(Ndaughters):
 
         #Run over time        
         for t in range(1, Nsteps):
-            lmp.command("run " + str(Delay) + " pre yes post no")
+            lmp.command("run " + str(Delay) + " pre yes post yes")
             data_profile[t, :, :] = utils.get_fix_data(lmp, "Profile_variables", profile_variables, Nbins)
             data_global[t, :] = utils.get_fix_data(lmp, "Global_variables", global_variables)
 
