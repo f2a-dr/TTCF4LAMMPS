@@ -50,8 +50,24 @@ class TTCF():
         self.integrand_global_partial  = np.zeros([Nsteps, avetime_ncol])
         self.integrand_profile_partial = np.zeros([Nsteps, Nbins, avechunk_ncol])
 
-        self.integrand_global_correction_partial = np.zeros([Nsteps, avetime_ncol])
-        self.integrand_profile_correction_partial = np.zeros([Nsteps, Nbins, avetime_ncol])
+        self.global_partial_B_zero = np.zeros([Nsteps, avetime_ncol])
+        self.global_partial_O_zero = np.zeros([Nsteps, avetime_ncol])
+        self.global_partial_B = np.zeros([Nsteps, avetime_ncol])
+        self.global_partial_OB = np.zeros([Nsteps, avetime_ncol])
+        self.global_partial_integrand_B = np.zeros([Nsteps,avetime_ncol])
+        self.global_partial_integrand_OB = np.zeros([Nsteps, avetime_ncol])
+
+        self.global_partial_B_zero = np.zeros([Nsteps, avetime_ncol])
+        self.global_partial_O_zero = np.zeros([Nsteps, avetime_ncol])
+        self.global_partial_B = np.zeros([Nsteps, avetime_ncol])
+        self.global_partial_OB = np.zeros([Nsteps, avetime_ncol])
+        self.global_integrand_B = np.zeros([Nsteps,avetime_ncol])
+        self.global_integrand_OB = np.zeros([Nsteps, avetime_ncol])
+
+        self.profile_B_zero = np.zeros([Nsteps, Nbins, avechunk_ncol])
+        self.profile_O_zero = np.zeros([Nsteps, Nbins, avechunk_ncol])
+        self.profile_integrand_B = np.zeros([Nsteps, Nbins, avechunk_ncol])
+        self.profile_integrand_OB = np.zeros([Nsteps, Nbins, avechunk_ncol])
 
     def add_mappings(self, data_profile, data_global, omega):
 
@@ -62,20 +78,19 @@ class TTCF():
         self.integrand_profile_partial += data_profile[:,:,:]*omega
         self.integrand_global_partial  += data_global[:,:]*omega
 
-        self.integrand_global_correction_partial = np.zeros([Nsteps, avetime_ncol])
-        self.integrand_profile_correction_partial = np.zeros([Nsteps, Nbins, avetime_ncol])
-
     def integrate(self, step):
 
         #Perform the integration
         self.TTCF_profile_partial = TTCF_integration(self.integrand_profile_partial, step)
         self.TTCF_global_partial  = TTCF_integration(self.integrand_global_partial, step)
 
-        # Integrate B(s) for the correction term
-        self.TTCF_global_correction_partial = TTCF_integration(self.integrand_global_correction_partial, step)
-        self.TTCF_profile_correction_partial = TTCF_integration(self.integrand_profile_correction_partial, step)
+        # Integrate Omega(0)B(s)
+        self.global_partial_OB = TTCF_integration(self.global_integrand_OB, step)
 
-        #Add the initial value (t=0) 
+        # Integrate B(s) for the correction term
+        self.global_partial_B = TTCF_integration(self.global_integrand_B, step)
+
+        # Add the initial value (t=0) 
         self.TTCF_profile_partial += self.DAV_profile_partial[0,:,:]
         self.TTCF_global_partial  += self.DAV_global_partial[0,:]
 
@@ -89,6 +104,11 @@ class TTCF():
 
         #Update all means and variances
         if self.Count >1:
+
+            self.global_B_zero_mean = update_mean(self.global_partial_B_zero, self.global_mean_B_zero, self.count)
+            self.global_O_zero_mean = update_mean(self.global_partial_O_zero, self.global_mean_O_zero, self.count)
+            self.global_B_mean = update_mean(self.global_partial_B, self.global_mean_B, self.count)
+            self.global_OB_mean = update_mean(self.global_partial_OB, self.global_mean_OB, self.count)
         
             self.TTCF_profile_var= update_var(self.TTCF_profile_partial, self.TTCF_profile_mean, self.TTCF_profile_var, self.Count)      
             self.DAV_profile_var= update_var(self.DAV_profile_partial, self.DAV_profile_mean, self.DAV_profile_var, self.Count)
@@ -102,13 +122,13 @@ class TTCF():
 
         self.DAV_profile_partial[:,:,:] = 0
         self.DAV_global_partial[:,:]    = 0
-            
+
         self.integrand_profile_partial[:,:,:] = 0
         self.integrand_global_partial[:,:]    = 0
 
-        self.integrand_profile_correction_partial[:,:,:] = 0
-        self.integrand_global_correction_partial[:,:] = 0
-
+        self.global_integrand_OB[:,:] = 0
+        self.global_integrand_B[:,:] = 0
+            
     def finalise_output(self, irank, comm, root=0):
 
         self.irank = irank
@@ -130,7 +150,7 @@ class TTCF():
         self.TTCF_profile_var /= float(self.Count)
         self.DAV_profile_var  /= float(self.Count)
 
-        #Compute MEN AND VARIANCE OF BOTH DAV AND TTCF
+        #Compute MEAN AND VARIANCE OF BOTH DAV AND TTCF
         self.TTCF_profile_mean_total = sum_over_MPI(self.TTCF_profile_mean, irank, comm)
         self.DAV_profile_mean_total = sum_over_MPI(self.DAV_profile_mean, irank, comm)
         self.TTCF_profile_var_total = sum_over_MPI(self.TTCF_profile_var, irank, comm)
@@ -140,6 +160,11 @@ class TTCF():
         self.DAV_global_mean_total = sum_over_MPI(self.DAV_global_mean, irank, comm)
         self.TTCF_global_var_total = sum_over_MPI(self.TTCF_global_var, irank, comm)
         self.DAV_global_var_total = sum_over_MPI(self.DAV_global_var, irank, comm)
+
+        self.global_B_zero_mean_total = sum_over_MPI(self.global_B_zero_mean, irank, comm)
+        self.global_O_zero_mean_total = sum_over_MPI(self.global_O_zero_mean, irank, comm)
+        self.global_B_mean_total = sum_over_MPI(self.global_B_mean, irank, comm)
+        self.global_O_mean_total = sum_over_MPI(self.global_O_mean, irank, comm)
 
         #Total is None on everything but the root processor
         if irank == self.root:
@@ -158,6 +183,12 @@ class TTCF():
             self.TTCF_global_SE_total   = np.sqrt(self.TTCF_global_var_total)
             self.DAV_global_SE_total    = np.sqrt(self.DAV_global_var_total)
 
+            self.global_B_zero_mean_total = self.global_B_zero_mean_total/float(self.nprocs)
+            self.global_O_zero_mean_total = self.global_O_zero_mean_total/float(self.nprocs)
+            self.global_B_mean_total = self.global_B_mean_total/float(self.nprocs)
+            self.global_OB_mean_total = self.global_OB_mean_total/float(self.nprocs)
+
+            self.TTCF_global_mean_total = self.global_B_zero_mean_total + self.global_OB_mean_total - self.global_O_zero_mean_total*self.global_B_mean_total
 
     def plot_data(self, animated=False):
 
