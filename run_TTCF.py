@@ -134,7 +134,8 @@ for Nd in range(Ndaughters):
         utils.unset_list(lmp, setlist)
 
         #Sum the mappings together
-        ttcf.add_mappings(data_profile, data_global, omega)
+        # ttcf.add_mappings(data_profile, data_global, omega)
+        ttcf.integration_setup(data_profile, data_global, omega)
 
     #Perform the integration
     ttcf.integrate(dt*Delay)
