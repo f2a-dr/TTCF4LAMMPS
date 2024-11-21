@@ -54,7 +54,7 @@ class TTCF():
         self.global_integrand_B = np.zeros([Nsteps,avetime_ncol])
         self.global_integrand_OB = np.zeros([Nsteps, avetime_ncol])
         self.global_B_zero_mean = np.zeros([Nsteps, avetime_ncol])
-        self.global_OB_zero_mean = np.zeros([Nsteps, avetime_ncol])
+        self.global_O_zero_mean = np.zeros([Nsteps, avetime_ncol])
         self.global_B_mean = np.zeros([Nsteps, avetime_ncol])
         self.global_OB_mean = np.zeros([Nsteps, avetime_ncol])
 
@@ -65,7 +65,7 @@ class TTCF():
         self.profile_integrand_B = np.zeros([Nsteps, Nbins, avechunk_ncol])
         self.profile_integrand_OB = np.zeros([Nsteps, Nbins, avechunk_ncol])
         self.profile_B_zero_mean = np.zeros([Nsteps, Nbins, avechunk_ncol])
-        self.profile_OB_zero_mean = np.zeros([Nsteps, Nbins, avechunk_ncol])
+        self.profile_O_zero_mean = np.zeros([Nsteps, Nbins, avechunk_ncol])
         self.profile_B_mean = np.zeros([Nsteps, Nbins, avechunk_ncol])
         self.profile_OB_mean = np.zeros([Nsteps, Nbins, avechunk_ncol])
 
@@ -104,6 +104,12 @@ class TTCF():
         # Integrate B(s) for the correction term
         self.global_partial_B = TTCF_integration(self.global_integrand_B, step)
         self.profile_partial_B = TTCF_integration(self.profile_integrand_B, step)
+
+        # Set initial values for Omega(t=0) and B(t=0)
+        self.global_partial_B_zero = self.DAV_global_partial[0,:]
+        self.profile_partial_B_zero = self.DAV_profile_partial[0,:,:]
+        self.global_partial_O_zero = self.DAV_global_partial[0,-1]
+        self.profile_partial_O_zero = self.DAV_global_partial[0,-1]
 
         # Add the initial value (t=0) 
         # self.TTCF_profile_partial += self.DAV_profile_partial[0,:,:]
@@ -156,15 +162,20 @@ class TTCF():
 
         #Get FINAL COLUMN BECAUSE BY DEFAULT LAMMPS GIVE YOU ALSO THE USELESS INFO ABOUT THE BINS.
         # For  N QUANTITIES, could TAKE THE LAST N ELEMENTS
-        self.TTCF_profile_mean = self.TTCF_profile_mean[:,:,2:]
+        self.profile_B_zero_mean = self.profile_B_zero_mean[:,:,2:]
+        self.profile_O_zero_mean = self.profile_O_zero_mean[:,:,2:]
+        self.profile_B_mean = self.profile_B_mean[:,:,2:]
+        self.profile_OB_mean = self.profile_OB_mean[:,:,2:]
+
+        # self.TTCF_profile_mean = self.TTCF_profile_mean[:,:,2:]
         self.DAV_profile_mean  = self.DAV_profile_mean[:,:,2:]
 
-        self.TTCF_profile_var = self.TTCF_profile_var[:,:,2:]
+        # self.TTCF_profile_var = self.TTCF_profile_var[:,:,2:]
         self.DAV_profile_var  = self.DAV_profile_var[:,:,2:]
 
-        self.TTCF_global_var/= float(self.Count)
+        # self.TTCF_global_var/= float(self.Count)
         self.DAV_global_var /= float(self.Count)
-        self.TTCF_profile_var /= float(self.Count)
+        # self.TTCF_profile_var /= float(self.Count)
         self.DAV_profile_var  /= float(self.Count)
 
         #Compute MEAN AND VARIANCE OF BOTH DAV AND TTCF
@@ -262,7 +273,7 @@ class TTCF():
                 np.savetxt('profile_DAV_' + var_name + '.txt', self.DAV_profile_mean_total[:,:,i])
                 np.savetxt('profile_TTCF_' + var_name + '.txt', self.TTCF_profile_mean_total[:,:,i])
                 np.savetxt('profile_DAV_SE_' + var_name + '.txt', self.DAV_profile_SE_total[:,:,i])
-                np.savetxt('profile_TTCF_SE_' + var_name + '.txt',self.TTCF_profile_SE_total[:,:,i])
+                # np.savetxt('profile_TTCF_SE_' + var_name + '.txt',self.TTCF_profile_SE_total[:,:,i])
             
             
             #np.savetxt('profile_DAV.txt', self.DAV_profile_mean_total)
@@ -275,6 +286,6 @@ class TTCF():
             np.savetxt('global_TTCF.txt', self.TTCF_global_mean_total)
             
             np.savetxt('global_DAV_SE.txt', self.DAV_global_SE_total)
-            np.savetxt('global_TTCF_SE.txt', self.TTCF_global_SE_total)
+            # np.savetxt('global_TTCF_SE.txt', self.TTCF_global_SE_total)
                  
 
