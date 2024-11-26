@@ -20,14 +20,14 @@ variable   nBeads   equal   (${xsize}*${ysize}*${zsize})*${rho}
 
 # Simulation parameters
 dimension   ${ndim}
-variable    srate equal 0.001
+variable    srate equal 1e-6
 
 # System setting
 atom_style  atomic 
 boundary    p p p
 # comm_modify mode single cutoff 10.0 vel yes 
 comm_modify vel yes 
-newton      on on
+# newton      on on
 
 # Simulation domain creation and initialization
 lattice         none 1

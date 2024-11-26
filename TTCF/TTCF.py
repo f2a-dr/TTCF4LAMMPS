@@ -78,8 +78,18 @@ class TTCF():
         self.DAV_profile_partial  += data_profile[:,:,:]
         self.DAV_global_partial   += data_global[:,:]
 
-        # self.integrand_profile_partial += data_profile[:,:,:]*omega
-        # self.integrand_global_partial  += data_global[:,:]*omega
+        self.global_integrand_B += data_global[:,:]
+        self.profile_integrand_B += data_profile[:,:,:]
+        self.global_integrand_OB += data_global[:,:]*data_global[0,-1]
+        self.profile_integrand_OB += data_profile[:,:,:]*data_global[0,-1]
+
+        # Set initial values for Omega(t+=0) and B(t=0)
+        # self.global_partial_B_zero[:,:] += data_global[0,:]
+        self.profile_partial_B_zero[:,:,:] += data_profile[0,:,:]
+        self.profile_partial_B_zero[:,:,3] = 0
+        self.global_partial_O_zero[:,:] += data_global[0,-1]
+        self.profile_partial_O_zero[:,:,:] += data_global[0,-1]
+
 
     def integration_setup(self, data_profile, data_global, omega):
         
@@ -88,8 +98,16 @@ class TTCF():
 
         self.global_integrand_B = data_global[:,:]
         self.profile_integrand_B = data_profile[:,:,:]
-        self.global_integrand_OB = data_global[:,:]*omega
-        self.profile_integrand_OB = data_profile[:,:,:]*omega
+        # self.global_integrand_OB = data_global[:,:]*omega
+        # self.profile_integrand_OB = data_profile[:,:,:]*omega
+        self.global_integrand_OB = data_global[:,:]*data_global[0,-1]
+        self.profile_integrand_OB = data_profile[:,:,:]*data_global[0,-1]
+
+        # Set initial values for Omega(t=0) and B(t=0)
+        self.global_partial_B_zero[:,:] = data_global[0,:]
+        self.profile_partial_B_zero[:,:,:] = data_profile[0,:,:]
+        self.global_partial_O_zero[:,:] = data_global[0,-1]
+        self.profile_partial_O_zero[:,:,:] = data_global[0,-1]
 
     def integrate(self, step):
 
@@ -105,21 +123,23 @@ class TTCF():
         self.global_partial_B = TTCF_integration(self.global_integrand_B, step)
         self.profile_partial_B = TTCF_integration(self.profile_integrand_B, step)
 
-        # Set initial values for Omega(t=0) and B(t=0)
-        self.global_partial_B_zero = self.DAV_global_partial[0,:]
-        self.profile_partial_B_zero = self.DAV_profile_partial[0,:,:]
-        self.global_partial_O_zero = self.DAV_global_partial[0,-1]
-        self.profile_partial_O_zero = self.DAV_global_partial[0,-1]
-
         # Add the initial value (t=0) 
         # self.TTCF_profile_partial += self.DAV_profile_partial[0,:,:]
         # self.TTCF_global_partial  += self.DAV_global_partial[0,:]
 
         # Average over the mappings and update the Count (# of children trajectories generated excluding the mappings)
-        # self.DAV_profile_partial  /= self.Nmappings   
-        # self.DAV_global_partial   /= self.Nmappings 
+        self.DAV_profile_partial  /= self.Nmappings   
+        self.DAV_global_partial   /= self.Nmappings 
         # self.TTCF_profile_partial /= self.Nmappings   
         # self.TTCF_global_partial  /= self.Nmappings 
+        self.global_partial_B_zero /= self.Nmappings
+        self.profile_partial_B_zero /= self.Nmappings
+        self.global_partial_O_zero /= self.Nmappings
+        self.profile_partial_O_zero /= self.Nmappings
+        self.global_partial_OB /= self.Nmappings
+        self.profile_partial_OB /= self.Nmappings
+        self.global_partial_B /= self.Nmappings
+        self.profile_partial_B /= self.Nmappings
 
         self.Count += 1
 
@@ -146,12 +166,22 @@ class TTCF():
         self.profile_B_mean = update_mean(self.profile_partial_B, self.profile_B_mean, self.Count)
         self.profile_OB_mean = update_mean(self.profile_partial_OB, self.profile_OB_mean, self.Count)
         
-        # self.DAV_profile_partial[:,:,:] = 0
-        # self.DAV_global_partial[:,:]    = 0
+        # np.savetxt('profile_B_zero_mean' + '_vx_' + str(self.Count) + '.txt', self.profile_B_zero_mean[:,:,2])
+        # np.savetxt('profile_O_zero_mean' + '_vx_' + str(self.Count) + '.txt', self.profile_O_zero_mean[:,:,2])
 
-        # self.global_integrand_OB[:,:] = 0
-        # self.global_integrand_B[:,:] = 0
+        self.DAV_profile_partial[:,:,:] = 0
+        self.DAV_global_partial[:,:]    = 0
+
+        self.global_integrand_OB[:,:] = 0
+        self.global_integrand_B[:,:] = 0
+        self.profile_integrand_OB[:,:,:] = 0
+        self.profile_integrand_B[:,:,:] = 0
             
+        self.global_partial_B_zero[:,:] = 0
+        self.profile_partial_B_zero[:,:,:] = 0
+        self.global_partial_O_zero[:,:] = 0
+        self.profile_partial_O_zero[:,:,:] = 0
+
     def finalise_output(self, irank, comm, root=0):
 
         self.irank = irank
@@ -273,6 +303,10 @@ class TTCF():
                 np.savetxt('profile_DAV_' + var_name + '.txt', self.DAV_profile_mean_total[:,:,i])
                 np.savetxt('profile_TTCF_' + var_name + '.txt', self.TTCF_profile_mean_total[:,:,i])
                 np.savetxt('profile_DAV_SE_' + var_name + '.txt', self.DAV_profile_SE_total[:,:,i])
+                # np.savetxt('profile_B_zero_mean_total' + var_name + '.txt', self.profile_B_zero_mean_total[:,:,i])
+                # np.savetxt('profile_O_zero_mean_total' + var_name + '.txt', self.profile_O_zero_mean_total[:,:,i])
+                # np.savetxt('profile_B_mean_total' + var_name + '.txt', self.profile_B_mean_total[:,:,i])
+                # np.savetxt('profile_OB_mean_total' + var_name + '.txt', self.profile_OB_mean_total[:,:,i])
                 # np.savetxt('profile_TTCF_SE_' + var_name + '.txt',self.TTCF_profile_SE_total[:,:,i])
             
             
@@ -282,6 +316,10 @@ class TTCF():
             #np.savetxt('profile_DAV_SE.txt', self.DAV_profile_SE_total)
             #np.savetxt('profile_TTCF_SE.txt', self.TTCF_profile_SE_total)
             
+            # np.savetxt('global_B_zero_mean_total.txt', self.global_B_zero_mean_total)
+            # np.savetxt('global_O_zero_mean_total.txt', self.global_O_zero_mean_total)
+            # np.savetxt('global_B_mean_total.txt', self.global_B_mean_total)
+            # np.savetxt('global_OB_mean_total.txt', self.global_OB_mean_total)
             np.savetxt('global_DAV.txt', self.DAV_global_mean_total)
             np.savetxt('global_TTCF.txt', self.TTCF_global_mean_total)
             

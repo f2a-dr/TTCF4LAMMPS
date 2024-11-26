@@ -16,15 +16,15 @@ root = 0
 print("Proc {:d} out of {:d} procs".format(irank+1,nprocs), flush=True)
 
 #Define lengths for all runs, number of Daughters, etc
-Tot_Daughters         = 1000
+Tot_Daughters         = 100000
 Maps                  = [0,21,48,37]
 Nsteps_Thermalization = 10000
-Nsteps_Decorrelation  = 10000
-Nsteps_Daughter       = 500
-Delay                 = 10
-Nbins                 = 100
-dt                    = 0.0025
-showplots             = True
+Nsteps_Decorrelation  = 1000
+Nsteps_Daughter       = 1000
+Delay                 = 1
+Nbins                 = 50
+dt                    = 0.01
+showplots             = False
 
 #Set the the GPU forcde calculation (1 GPU calculation, 0 no use of GPU).
 #IMPORTANT: THE GPU PACKAGE REQUIRES ONE TO INSERT THE SPECIFIC GPU MODEL. PLEASE EDIT THE COMMAND ACCORDINGLY.
@@ -87,7 +87,7 @@ args = ['-sc', 'none','-log', 'none','-var', 'rand_seed' , seed_v ,'-var', 'use_
 lmp = lammps(comm=MPI.COMM_SELF, cmdargs=args)
 
 #Run equilibration  
-lmp.file("system_setup.in")
+lmp.file("dpdSystem_setup.in")
 lmp.command("timestep " + str(dt))
 utils.run_mother_trajectory(lmp,Nsteps_Thermalization,Thermo_damp)
 
@@ -134,9 +134,10 @@ for Nd in range(Ndaughters):
         utils.unset_list(lmp, setlist)
 
         #Sum the mappings together
-        # ttcf.add_mappings(data_profile, data_global, omega)
-        ttcf.integration_setup(data_profile, data_global, omega)
+        ttcf.add_mappings(data_profile, data_global, omega)
+        # ttcf.integration_setup(data_profile, data_global, omega)
 
+    # ttcf.integration_setup(data_profile, data_global, omega)
     #Perform the integration
     ttcf.integrate(dt*Delay)
 
