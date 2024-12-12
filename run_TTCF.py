@@ -16,14 +16,14 @@ root = 0
 print("Proc {:d} out of {:d} procs".format(irank+1,nprocs), flush=True)
 
 #Define lengths for all runs, number of Daughters, etc
-Tot_Daughters         = 100000
-Maps                  = [0,21,48,37]
+Tot_Daughters         = 10000
+Maps                  = [0, 21]
 Nsteps_Thermalization = 10000
 Nsteps_Decorrelation  = 1000
-Nsteps_Daughter       = 1000
+Nsteps_Daughter       = 600
 Delay                 = 1
 Nbins                 = 50
-dt                    = 0.01
+dt                    = 0.0025
 showplots             = False
 
 #Set the the GPU forcde calculation (1 GPU calculation, 0 no use of GPU).
@@ -87,7 +87,7 @@ args = ['-sc', 'none','-log', 'none','-var', 'rand_seed' , seed_v ,'-var', 'use_
 lmp = lammps(comm=MPI.COMM_SELF, cmdargs=args)
 
 #Run equilibration  
-lmp.file("dpdSystem_setup.in")
+lmp.file("system_setup.in")
 lmp.command("timestep " + str(dt))
 utils.run_mother_trajectory(lmp,Nsteps_Thermalization,Thermo_damp)
 
@@ -139,10 +139,11 @@ for Nd in range(Ndaughters):
 
     # ttcf.integration_setup(data_profile, data_global, omega)
     #Perform the integration
-    ttcf.integrate(dt*Delay)
+    ttcf.integrate(dt*Delay, irank)
 
 #Close lammps instance and plot time taken
 lmp.close()
+comm.Barrier()
 t2 = MPI.Wtime()
 if irank == root:
     print("Walltime =", t2 - t1, flush=True)
