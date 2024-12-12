@@ -109,7 +109,7 @@ class TTCF():
         self.global_partial_O_zero[:,:] = data_global[0,-1]
         self.profile_partial_O_zero[:,:,:] = data_global[0,-1]
 
-    def integrate(self, step):
+    def integrate(self, step, irank):
 
         # Perform the integration
         # self.TTCF_profile_partial = TTCF_integration(self.integrand_profile_partial, step)
@@ -140,6 +140,11 @@ class TTCF():
         self.profile_partial_OB /= self.Nmappings
         self.global_partial_B /= self.Nmappings
         self.profile_partial_B /= self.Nmappings
+
+        with open('PxyTime_' + str(irank+1) + '.dat', 'a') as f:
+                # toWrite = str(self.global_partial_B_zero[:, 0] + self.global_partial_OB[:, 0] - self.global_partial_O_zero[:, 0]*self.global_partial_B[:, 0])
+                toWrite = str(self.global_partial_OB[:, 0])
+                f.write(toWrite)
 
         self.Count += 1
 
