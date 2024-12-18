@@ -16,8 +16,8 @@ root = 0
 print("Proc {:d} out of {:d} procs".format(irank+1,nprocs), flush=True)
 
 #Define lengths for all runs, number of Daughters, etc
-Tot_Daughters         = 50000
-Maps                  = [0,21,48,37]
+Tot_Daughters         = 100000
+Maps                  = [0, 21]
 Nsteps_Thermalization = 10000
 Nsteps_Decorrelation  = 1000
 Nsteps_Daughter       = 600
@@ -54,15 +54,16 @@ setlist.append("fix NVT_SLLOD all nvt/sllod temp ${T} ${T} " + str(Thermo_damp))
 # ============= Outputs =========================
 #Here we define all the computes to get outputs from the simulation
 #Profile 1D chunks here, can add anything from https://docs.lammps.org/fix_ave_chunk.html
-profile_variables = ['vx']
+profile_variables = ['vx', 'c_stress[4]']
 #Define bin discretization
 setlist.append("compute profile_layers all chunk/atom bin/1d y lower "+str(Bin_Width)+" units reduced")
-#Profile (ave/chunk fix)
-setlist.append("fix Profile_variables all ave/chunk 1 1 {} profile_layers {} ave one".format(Delay, ' '.join(profile_variables)))
 #Define computes to get Omega
 setlist.append("compute        shear_T all temp/deform")
 setlist.append("compute        shear_P all pressure shear_T ")
 setlist.append("variable       Omega equal -c_shear_P[4]*(xhi-xlo)*(yhi-ylo)*(zhi-zlo)*${srate}/(${k_B}*${T})")
+#Profile (ave/chunk fix)
+setlist.append("compute        stress all stress/atom shear_T")
+setlist.append("fix Profile_variables all ave/chunk 1 1 {} profile_layers {} ave one".format(Delay, ' '.join(profile_variables)))
 #And global (ave/time fix) variables, often custom computes/variables, see https://docs.lammps.org/fix_ave_time.html
 global_variables = ['c_shear_P[4]', 'v_Omega']
 #global ave/time fix
@@ -70,7 +71,7 @@ setlist.append("fix Global_variables all ave/time 1 1 {} {} ave one".format(Dela
 
 
 #Create TTCF class 
-ttcf = TTCF.TTCF(global_variables, profile_variables, Nsteps, Nbins, Nmappings)
+ttcf = TTCF.TTCFnoMap(global_variables, profile_variables, Nsteps, Nbins, Nmappings)
 data_global = np.zeros([Nsteps, len(global_variables)])
 data_profile  = np.zeros([Nsteps, Nbins, len(profile_variables) + 2])
 
@@ -92,6 +93,8 @@ utils.run_mother_trajectory(lmp,Nsteps_Thermalization,Thermo_damp)
 
 #Save snapshot to use for daughters
 state = utils.save_state(lmp, "snapshot")
+
+ttcf.createDirectories(irank)
 
 #Loop over all sets of daughters
 for Nd in range(Ndaughters):
@@ -125,7 +128,7 @@ for Nd in range(Ndaughters):
 
         #Run over time        
         for t in range(1, Nsteps):
-            lmp.command("run " + str(Delay) + " pre yes post no")
+            lmp.command("run " + str(Delay) + " pre yes post yes")
             data_profile[t, :, :] = utils.get_fix_data(lmp, "Profile_variables", profile_variables, Nbins)
             data_global[t, :] = utils.get_fix_data(lmp, "Global_variables", global_variables)
 
@@ -133,10 +136,12 @@ for Nd in range(Ndaughters):
         utils.unset_list(lmp, setlist)
 
         #Sum the mappings together
-        ttcf.add_mappings(data_profile, data_global, omega)
+        ttcf.add_mappings(data_profile, data_global)
 
     #Perform the integration
-    ttcf.integrate(dt*Delay, irank)
+    ttcf.integrate(dt*Delay)
+    ttcf.writeTrajectories(irank)
+    ttcf.updateMeanVar()
 
 #Close lammps instance and plot time taken
 lmp.close()
