@@ -43,4 +43,4 @@ pair_coeff  1 1 ${a} ${gamma}         # H20
 
 # Neighbor list parameters
 neighbor        1.0 bin
-neigh_modify    delay 0 every 1 check yes
+neigh_modify    delay 0 every 1 check no
